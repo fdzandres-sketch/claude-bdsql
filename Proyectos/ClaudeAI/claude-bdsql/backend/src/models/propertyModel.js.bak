@@ -1,0 +1,312 @@
+const { query } = require('../config/database');
+
+class PropertyModel {
+  // Get all properties with filters and pagination
+  static async getAll(filters = {}, pagination = {}) {
+    const { limit = 10, offset = 0 } = pagination;
+    const conditions = [];
+    const params = [];
+
+    // Base query
+    let sql = `
+      SELECT
+        p.*,
+        u.nombre_completo as broker_nombre,
+        u.email as broker_email,
+        u.telefono as broker_telefono,
+        z.nombre as zona_nombre,
+        d.nombre as desarrollo_nombre,
+        (SELECT COUNT(*) FROM propiedad_imagenes WHERE propiedad_id = p.id) as total_imagenes,
+        (SELECT imagen_url FROM propiedad_imagenes WHERE propiedad_id = p.id ORDER BY orden LIMIT 1) as imagen_principal
+      FROM propiedades p
+      LEFT JOIN usuarios u ON p.broker_id = u.id
+      LEFT JOIN zonas z ON p.zona_id = z.id
+      LEFT JOIN desarrollos d ON p.desarrollo_id = d.id
+    `;
+
+    // Always show only active properties for public
+    conditions.push('p.estatus = ?');
+    params.push('activo');
+
+    // Filters
+    if (filters.tipo_propiedad) {
+      conditions.push('p.tipo_propiedad = ?');
+      params.push(filters.tipo_propiedad);
+    }
+
+    if (filters.tipo_transaccion) {
+      conditions.push('p.tipo_transaccion = ?');
+      params.push(filters.tipo_transaccion);
+    }
+
+    if (filters.zona_id) {
+      conditions.push('p.zona_id = ?');
+      params.push(filters.zona_id);
+    }
+
+    if (filters.desarrollo_id) {
+      conditions.push('p.desarrollo_id = ?');
+      params.push(filters.desarrollo_id);
+    }
+
+    if (filters.precio_min) {
+      conditions.push('p.precio >= ?');
+      params.push(filters.precio_min);
+    }
+
+    if (filters.precio_max) {
+      conditions.push('p.precio <= ?');
+      params.push(filters.precio_max);
+    }
+
+    if (filters.recamaras) {
+      conditions.push('p.recamaras >= ?');
+      params.push(filters.recamaras);
+    }
+
+    if (filters.banos) {
+      conditions.push('p.banos >= ?');
+      params.push(filters.banos);
+    }
+
+    if (filters.estacionamientos) {
+      conditions.push('p.estacionamientos >= ?');
+      params.push(filters.estacionamientos);
+    }
+
+    if (filters.terreno_min) {
+      conditions.push('p.superficie_terreno >= ?');
+      params.push(filters.terreno_min);
+    }
+
+    if (filters.construccion_min) {
+      conditions.push('p.superficie_construccion >= ?');
+      params.push(filters.construccion_min);
+    }
+
+    if (filters.search) {
+      conditions.push('(p.titulo LIKE ? OR p.descripcion LIKE ? OR z.nombre LIKE ?)');
+      const searchTerm = `%${filters.search}%`;
+      params.push(searchTerm, searchTerm, searchTerm);
+    }
+
+    // Add conditions to query
+    if (conditions.length > 0) {
+      sql += ' WHERE ' + conditions.join(' AND ');
+    }
+
+    // Order by
+    const orderBy = filters.orden || 'fecha_creacion';
+    const orderDir = filters.direccion || 'DESC';
+    sql += ` ORDER BY p.${orderBy} ${orderDir}`;
+
+    // Pagination
+    sql += ' LIMIT ? OFFSET ?';
+    params.push(limit, offset);
+
+    const properties = await query(sql, params);
+
+    // Get total count
+    let countSql = 'SELECT COUNT(*) as total FROM propiedades p WHERE p.estatus = ?';
+    const countParams = ['activo'];
+
+    if (conditions.length > 1) {
+      const whereConditions = conditions.slice(1); // Remove first condition (estatus)
+      countSql += ' AND ' + whereConditions.join(' AND ');
+      countParams.push(...params.slice(1, -2)); // Remove estatus, limit and offset
+    }
+
+    const [{ total }] = await query(countSql, countParams);
+
+    return { properties, total };
+  }
+
+  // Get property by ID
+  static async getById(id) {
+    const sql = `
+      SELECT
+        p.*,
+        u.id as broker_id,
+        u.nombre_completo as broker_nombre,
+        u.email as broker_email,
+        u.telefono as broker_telefono,
+        u.foto_perfil as broker_foto,
+        u.cedula_profesional as broker_cedula,
+        z.nombre as zona_nombre,
+        z.descripcion as zona_descripcion,
+        d.nombre as desarrollo_nombre,
+        d.descripcion as desarrollo_descripcion
+      FROM propiedades p
+      LEFT JOIN usuarios u ON p.broker_id = u.id
+      LEFT JOIN zonas z ON p.zona_id = z.id
+      LEFT JOIN desarrollos d ON p.desarrollo_id = d.id
+      WHERE p.id = ? AND p.estatus = 'activo'
+    `;
+
+    const [property] = await query(sql, [id]);
+
+    if (property) {
+      // Get images
+      const images = await query(
+        'SELECT * FROM propiedad_imagenes WHERE propiedad_id = ? ORDER BY orden',
+        [id]
+      );
+      property.imagenes = images;
+
+      // Get amenities
+      const amenities = await query(
+        `SELECT a.* FROM amenidades a
+         INNER JOIN propiedad_amenidades pa ON a.id = pa.amenidad_id
+         WHERE pa.propiedad_id = ?`,
+        [id]
+      );
+      property.amenidades = amenities;
+    }
+
+    return property;
+  }
+
+  // Get properties by broker
+  static async getByBroker(brokerId, filters = {}) {
+    const conditions = ['p.broker_id = ?'];
+    const params = [brokerId];
+
+    let sql = `
+      SELECT
+        p.*,
+        z.nombre as zona_nombre,
+        d.nombre as desarrollo_nombre,
+        (SELECT COUNT(*) FROM propiedad_imagenes WHERE propiedad_id = p.id) as total_imagenes,
+        (SELECT imagen_url FROM propiedad_imagenes WHERE propiedad_id = p.id ORDER BY orden LIMIT 1) as imagen_principal,
+        (SELECT COUNT(*) FROM interacciones WHERE propiedad_id = p.id) as total_interacciones
+      FROM propiedades p
+      LEFT JOIN zonas z ON p.zona_id = z.id
+      LEFT JOIN desarrollos d ON p.desarrollo_id = d.id
+    `;
+
+    if (filters.estatus) {
+      conditions.push('p.estatus = ?');
+      params.push(filters.estatus);
+    }
+
+    sql += ' WHERE ' + conditions.join(' AND ');
+    sql += ' ORDER BY p.fecha_creacion DESC';
+
+    return await query(sql, params);
+  }
+
+  // Create property
+  static async create(propertyData) {
+    const sql = `
+      INSERT INTO propiedades (
+        broker_id, tipo_propiedad, tipo_transaccion, titulo, descripcion,
+        precio, recamaras, banos, medios_banos, estacionamientos,
+        superficie_terreno, superficie_construccion, antiguedad,
+        zona_id, desarrollo_id, direccion, ciudad, estado, codigo_postal,
+        latitud, longitud, video_url, tour_virtual_url, estatus
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `;
+
+    const params = [
+      propertyData.broker_id,
+      propertyData.tipo_propiedad,
+      propertyData.tipo_transaccion,
+      propertyData.titulo,
+      propertyData.descripcion,
+      propertyData.precio,
+      propertyData.recamaras || 0,
+      propertyData.banos || 0,
+      propertyData.medios_banos || 0,
+      propertyData.estacionamientos || 0,
+      propertyData.superficie_terreno || null,
+      propertyData.superficie_construccion || null,
+      propertyData.antiguedad || null,
+      propertyData.zona_id || null,
+      propertyData.desarrollo_id || null,
+      propertyData.direccion || null,
+      propertyData.ciudad || null,
+      propertyData.estado || null,
+      propertyData.codigo_postal || null,
+      propertyData.latitud || null,
+      propertyData.longitud || null,
+      propertyData.video_url || null,
+      propertyData.tour_virtual_url || null,
+      'activo'
+    ];
+
+    const result = await query(sql, params);
+    return result.insertId;
+  }
+
+  // Update property
+  static async update(id, propertyData) {
+    const fields = [];
+    const params = [];
+
+    Object.keys(propertyData).forEach(key => {
+      if (propertyData[key] !== undefined) {
+        fields.push(`${key} = ?`);
+        params.push(propertyData[key]);
+      }
+    });
+
+    params.push(id);
+
+    const sql = `UPDATE propiedades SET ${fields.join(', ')} WHERE id = ?`;
+    return await query(sql, params);
+  }
+
+  // Update property status
+  static async updateStatus(id, status) {
+    const sql = 'UPDATE propiedades SET estatus = ? WHERE id = ?';
+    return await query(sql, [status, id]);
+  }
+
+  // Clone property
+  static async clone(id, brokerId) {
+    const property = await this.getById(id);
+    if (!property) return null;
+
+    delete property.id;
+    delete property.fecha_creacion;
+    delete property.fecha_actualizacion;
+    property.broker_id = brokerId;
+    property.titulo = `${property.titulo} (Copia)`;
+
+    return await this.create(property);
+  }
+
+  // Delete property
+  static async delete(id) {
+    const sql = 'DELETE FROM propiedades WHERE id = ?';
+    return await query(sql, [id]);
+  }
+
+  // Add image
+  static async addImage(propertyId, imageData) {
+    const sql = `
+      INSERT INTO propiedad_imagenes (propiedad_id, imagen_url, descripcion, orden)
+      VALUES (?, ?, ?, ?)
+    `;
+    return await query(sql, [
+      propertyId,
+      imageData.imagen_url,
+      imageData.descripcion || null,
+      imageData.orden || 0
+    ]);
+  }
+
+  // Add amenity to property
+  static async addAmenity(propertyId, amenityId) {
+    const sql = 'INSERT INTO propiedad_amenidades (propiedad_id, amenidad_id) VALUES (?, ?)';
+    return await query(sql, [propertyId, amenityId]);
+  }
+
+  // Remove amenity from property
+  static async removeAmenity(propertyId, amenityId) {
+    const sql = 'DELETE FROM propiedad_amenidades WHERE propiedad_id = ? AND amenidad_id = ?';
+    return await query(sql, [propertyId, amenityId]);
+  }
+}
+
+module.exports = PropertyModel;

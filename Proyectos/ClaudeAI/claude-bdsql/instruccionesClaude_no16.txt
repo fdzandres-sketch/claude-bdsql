@@ -1,0 +1,10 @@
+Actualiza el archivo database/tablas_crm.sql para agregar al principio (después del ALTER TABLE personas para password) estos campos adicionales a la tabla personas:
+
+ALTER TABLE personas 
+ADD COLUMN activo BOOLEAN DEFAULT TRUE AFTER clasif_persona,
+ADD COLUMN fecha_inactivacion TIMESTAMP NULL,
+ADD COLUMN motivo_inactivacion VARCHAR(500);
+
+Esto permitirá marcar personas como inactivas sin borrarlas, manteniendo todo el historial.
+
+Coloca este ALTER TABLE justo después del que agrega la columna password.

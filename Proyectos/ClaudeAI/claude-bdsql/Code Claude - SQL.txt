@@ -1,0 +1,633 @@
+-- =========================================
+-- BASE DE DATOS INMOBILIARIA - SCHEMA COMPLETO
+-- Version: 1.0
+-- Base: MySQL 8.0+ / PostgreSQL 13+
+-- =========================================
+
+-- Crear base de datos
+CREATE DATABASE IF NOT EXISTS inmobiliaria_db 
+CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+USE inmobiliaria_db;
+
+-- =========================================
+-- TABLA 1: ZONAS (Base geográfica)
+-- =========================================
+CREATE TABLE zonas (
+    id_zona INT PRIMARY KEY AUTO_INCREMENT,
+    
+    -- Datos geográficos
+    estado VARCHAR(100) NOT NULL,
+    edo_codigo VARCHAR(10),
+    municipio VARCHAR(100) NOT NULL,
+    cp VARCHAR(10) NOT NULL,
+    cp_respaldo VARCHAR(20),
+    zona TEXT NOT NULL,
+    asentamiento VARCHAR(200),
+    tp_zn_ciudad VARCHAR(100),
+    tipo_zona VARCHAR(20) DEFAULT 'Urbano',
+    ciudad VARCHAR(100),
+    
+    -- Geolocalización
+    latitud DECIMAL(10,8),
+    longitud DECIMAL(11,8),
+    
+    -- Calificaciones (Fase 2 - nullable)
+    calif_zona DECIMAL(3,1),
+    nivel_socioeconomico VARCHAR(5),
+    indice_seguridad DECIMAL(3,1),
+    plusvalia_anual DECIMAL(5,2),
+    
+    -- Notas
+    nota TEXT,
+    
+    -- Timestamps
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    
+    -- Índices para búsquedas rápidas
+    INDEX idx_cp (cp),
+    INDEX idx_estado (estado),
+    INDEX idx_municipio (municipio),
+    INDEX idx_ciudad (ciudad),
+    INDEX idx_tipo_zona (tipo_zona),
+    INDEX idx_zona_fulltext (zona(255))
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- =========================================
+-- TABLA 2: EMPRESAS (Inmobiliarias y otras)
+-- =========================================
+CREATE TABLE empresas (
+    id_empresa INT PRIMARY KEY AUTO_INCREMENT,
+    
+    -- Datos de la empresa
+    nombre_sociedad VARCHAR(200) NOT NULL,
+    marca_inmobiliaria VARCHAR(200),
+    marca_franquicia VARCHAR(200),
+    giro ENUM('Notaria', 'Desarrolladora', 'Constructora', 'Despacho Arquitectura', 
+              'Portal Inmobiliario', 'Valuador', 'Proveedor Servicios RE', 'Inmobiliaria') DEFAULT 'Inmobiliaria',
+    
+    -- Dirección
+    calle VARCHAR(200),
+    no_exterior VARCHAR(20),
+    no_interior VARCHAR(20),
+    id_zona INT,
+    
+    -- Notas
+    nota_empresa TEXT,
+    
+    -- Timestamps
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    
+    -- Claves foráneas
+    FOREIGN KEY (id_zona) REFERENCES zonas(id_zona) ON DELETE SET NULL,
+    
+    -- Índices
+    INDEX idx_nombre_sociedad (nombre_sociedad),
+    INDEX idx_giro (giro)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- =========================================
+-- TABLA 3: PERSONAS (Brokers, Visitantes, Prospectos)
+-- =========================================
+CREATE TABLE personas (
+    id_persona INT PRIMARY KEY AUTO_INCREMENT,
+    
+    -- Datos personales
+    titulo VARCHAR(50),
+    nombre VARCHAR(100) NOT NULL,
+    apellido_paterno VARCHAR(100),
+    apellido_materno VARCHAR(100),
+    apellido_soltera VARCHAR(100),
+    
+    -- Contacto
+    mobil VARCHAR(20),
+    email VARCHAR(200),
+    tel_fijo VARCHAR(20),
+    
+    -- Clasificación
+    clasif_persona ENUM('Broker', 'Prospecto Comprador', 'Prospecto Arrendatario', 
+                        'Prospecto Oferente', 'Visitante sin identificar', 'Otro identificado') 
+                        DEFAULT 'Visitante sin identificar',
+    prioridad ENUM('A', 'B', 'C', 'D', 'E') DEFAULT 'E',
+    
+    -- Vínculos
+    id_empresa_vinc INT,
+    
+    -- Tracking
+    hookup_profiles JSON,
+    visitas_last_12_months INT DEFAULT 0,
+    
+    -- Proxies (calculados)
+    proxy_1_venta DECIMAL(12,2),
+    proxy_1_renta DECIMAL(12,2),
+    
+    -- Búsquedas recientes (JSON array de búsquedas)
+    busquedas_recientes JSON,
+    
+    -- Notas
+    nota_persona TEXT,
+    
+    -- Timestamps
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    
+    -- Claves foráneas
+    FOREIGN KEY (id_empresa_vinc) REFERENCES empresas(id_empresa) ON DELETE SET NULL,
+    
+    -- Índices
+    INDEX idx_email (email),
+    INDEX idx_clasif_persona (clasif_persona),
+    INDEX idx_prioridad (prioridad),
+    INDEX idx_nombre_completo (nombre, apellido_paterno)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- =========================================
+-- TABLA 4: RELACIONES PERSONAS (vínculos entre personas)
+-- =========================================
+CREATE TABLE relaciones_personas (
+    id_relacion INT PRIMARY KEY AUTO_INCREMENT,
+    
+    id_persona_1 INT NOT NULL,
+    id_persona_2 INT NOT NULL,
+    tipo_relacion ENUM('principales_empresa', 'asociados_empresa', 'familia', 
+                       'socio', 'referencia', 'otro') DEFAULT 'otro',
+    nota TEXT,
+    
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    
+    FOREIGN KEY (id_persona_1) REFERENCES personas(id_persona) ON DELETE CASCADE,
+    FOREIGN KEY (id_persona_2) REFERENCES personas(id_persona) ON DELETE CASCADE,
+    
+    INDEX idx_persona_1 (id_persona_1),
+    INDEX idx_persona_2 (id_persona_2),
+    INDEX idx_tipo_relacion (tipo_relacion)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- =========================================
+-- TABLA 5: DESARROLLOS (Fraccionamientos/Condominios)
+-- =========================================
+CREATE TABLE desarrollos (
+    id_desarrollo INT PRIMARY KEY AUTO_INCREMENT,
+    
+    nombre_desarrollo VARCHAR(200) NOT NULL,
+    id_zona INT,
+    tipo_desarrollo ENUM('Fraccionamiento privado', 'Condominio', 'Plaza comercial', 
+                         'Parque industrial', 'Edificio', 'Otro') DEFAULT 'Fraccionamiento privado',
+    
+    -- Calificación del desarrollo
+    calif_desarrollo DECIMAL(3,1),
+    
+    -- Amenidades comunes
+    amenidades JSON,
+    
+    nota TEXT,
+    
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    
+    FOREIGN KEY (id_zona) REFERENCES zonas(id_zona) ON DELETE SET NULL,
+    
+    INDEX idx_nombre_desarrollo (nombre_desarrollo),
+    INDEX idx_tipo_desarrollo (tipo_desarrollo)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- =========================================
+-- TABLA 6: INMUEBLES (Propiedades)
+-- =========================================
+CREATE TABLE inmuebles (
+    id_propiedad INT PRIMARY KEY AUTO_INCREMENT,
+    
+    -- Identificación y fechas
+    fecha_alta TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    fecha_publicacion TIMESTAMP,
+    
+    -- Clasificación básica
+    tipo_operacion ENUM('venta', 'renta', 'venta_renta') NOT NULL,
+    tipo_inmueble ENUM('departamento', 'casa', 'terreno', 'oficina', 'local comercial', 
+                       'edificio', 'hotel', 'bodega nave industrial', 'desarrollo', 
+                       'casa de campo', 'rancho', 'hacienda', 
+                       'terreno agricola ganadero o silvicola', 
+                       'terreno natural sin aprovechamiento') NOT NULL,
+    caracterizacion ENUM('solo', 'en privada', 'en fraccionamiento privado', 'en condominio', 
+                         'en parque industrial', 'en plaza comercial', 'en edificio', 
+                         'en desarrollo', 'en zona industrial', 'en zona protegida', 
+                         'predio rustico', 'predio urbano', 'predio suburbano'),
+    vocacion ENUM('residencial', 'comercial', 'oficina', 'industrial', 
+                  'vacacional/turistico', 'suburbano', 'rural') NOT NULL,
+    
+    -- Calificación interna (Fase 3)
+    calificacion_interna DECIMAL(5,2),
+    
+    -- Ubicación
+    id_zona INT NOT NULL,
+    id_desarrollo INT,
+    liga_a_desarrollo VARCHAR(500),
+    calle VARCHAR(200),
+    no_exterior VARCHAR(20),
+    no_interior VARCHAR(20),
+    
+    -- Descripción
+    titulo VARCHAR(300),
+    a_destacar VARCHAR(500),
+    descripcion TEXT,
+    
+    -- Superficies
+    unidad_terreno ENUM('m2', 'has') DEFAULT 'm2',
+    medida_terreno DECIMAL(12,2),
+    m2_terreno DECIMAL(12,2) AS (
+        CASE WHEN unidad_terreno = 'has' THEN medida_terreno * 10000 
+             ELSE medida_terreno END
+    ) STORED,
+    medida_construccion DECIMAL(12,2),
+    medida_jardin DECIMAL(12,2),
+    medida_terrazas DECIMAL(12,2),
+    porcentaje_indiviso DECIMAL(5,2),
+    m2_indiviso DECIMAL(12,2),
+    no_unidades_indiviso INT,
+    
+    -- Precios VENTA
+    moneda_venta ENUM('MXN', 'USD') DEFAULT 'MXN',
+    importe_venta DECIMAL(15,2),
+    tipo_de_cambio DECIMAL(8,4) DEFAULT 1.0000,
+    precio_venta_mn DECIMAL(15,2) AS (
+        CASE WHEN moneda_venta = 'USD' THEN importe_venta * tipo_de_cambio 
+             ELSE importe_venta END
+    ) STORED,
+    
+    -- Precios RENTA
+    moneda_renta ENUM('MXN', 'USD') DEFAULT 'MXN',
+    importe_renta DECIMAL(15,2),
+    precio_renta_mn DECIMAL(15,2) AS (
+        CASE WHEN moneda_renta = 'USD' THEN importe_renta * tipo_de_cambio 
+             ELSE importe_renta END
+    ) STORED,
+    
+    -- Costos adicionales
+    mantenimiento_mensual_mn DECIMAL(12,2),
+    predial_bimestral_mn DECIMAL(12,2),
+    
+    -- Precios calculados por m2
+    precio_m2_terrn_mn DECIMAL(12,2) AS (
+        CASE WHEN m2_terreno > 0 THEN precio_venta_mn / m2_terreno 
+             ELSE NULL END
+    ) STORED,
+    precio_m2_constr_mn DECIMAL(12,2) AS (
+        CASE WHEN medida_construccion > 0 THEN precio_venta_mn / medida_construccion 
+             ELSE NULL END
+    ) STORED,
+    
+    -- Precio estimado
+    precio_estim_terreno DECIMAL(15,2),
+    precio_estim_contr DECIMAL(15,2),
+    
+    -- Parámetros físicos
+    recamaras INT,
+    banos INT,
+    medios_banos INT,
+    estacionamientos INT,
+    
+    -- Espacios adicionales (JSON arrays)
+    otros_espacios_resid JSON,
+    otros_espacios_no_resid JSON,
+    areas_comunes JSON,
+    servicios_resid JSON,
+    servicios_no_resid JSON,
+    
+    -- Edad
+    ano_construccion YEAR,
+    ano_ultima_remodelacion YEAR,
+    edad INT AS (
+        YEAR(CURRENT_DATE) - GREATEST(
+            COALESCE(ano_construccion, 0), 
+            COALESCE(ano_ultima_remodelacion, 0)
+        )
+    ) STORED,
+    
+    -- Broker
+    marca_inmobiliaria VARCHAR(200),
+    logo_inmobiliaria VARCHAR(500),
+    mobil_inmobiliaria VARCHAR(20),
+    id_broker_encargado INT NOT NULL,
+    mobil_broker_enc VARCHAR(20),
+    mail_broker_enc VARCHAR(200),
+    
+    -- Calificaciones del Broker
+    calif_overall ENUM('lo mejor', 'muy bueno', 'bueno', 'regular', 'para remodelar', 'como terreno'),
+    calif_terreno_brk ENUM('plano', 'regular', 'irregular', 'descendente', 'ascendente', 
+                           'rodeado de edificios', 'uso de suelo mas de 3 niveles', 
+                           'uso de suelo comercial', 'uso de suelo oficina', 
+                           'uso de suelo industrial o bodega') DEFAULT 'regular',
+    calif_construccion_brk ENUM('nuevo', 'muy bueno', 'bueno', 'regular', 
+                                'para remodelar', 'para modificaciones mayores', 
+                                'estilo moderno', 'estilo contemporaneo', 'estilo colonial', 
+                                'estilizado', 'finos acabados', 'buenos acabados', 
+                                'bien cuidado', 'algunos detalles p arreglo', 
+                                'recien remodelado', 'mucha luz', 'techos altos', 
+                                'mas de 2 niveles', 'un solo nivel', 'espacios integrados', 
+                                'amplios espacios', 'buena vista') DEFAULT 'bueno',
+    calif_entorno_brk ENUM('exclusivo fraccionamiento', 'exclusiva privada', 
+                           'exclusivo desarrollo', 'excelente ubicacion', 'calle tranquila', 
+                           'zona segura', 'acceso a vialidades importantes', 'entorno verde', 
+                           'zona de calidad', 'zona centrica', 
+                           'escuelas y comercios cercanos', 'clubes cerca') DEFAULT 'zona de calidad',
+    
+    -- Palabras clave
+    palabras_clave JSON,
+    
+    -- Multimedia
+    fotos JSON,
+    videos JSON,
+    recorrido_3D VARCHAR(500),
+    plano VARCHAR(500),
+    otras_ligas JSON,
+    
+    -- Calidad de fotos (Fase 2-3)
+    calidad_fotos ENUM('excelente', 'buena', 'regular', 'mejorable'),
+    
+    -- Interacción
+    agrega_a_listados BOOLEAN DEFAULT TRUE,
+    contacto_a_broker BOOLEAN DEFAULT TRUE,
+    status ENUM('nueva', 'exclusivo fraccionamiento', 'exclusiva privada', 
+                'alta', 'promocion pausada', 'promocion suspendida', 
+                'operacion cerrada') DEFAULT 'nueva',
+    
+    -- Tráfico (calculados desde tabla visitas)
+    vistas INT DEFAULT 0,
+    clicks INT DEFAULT 0,
+    muestras_de_interes INT DEFAULT 0,
+    visitas INT DEFAULT 0,
+    interesados INT DEFAULT 0,
+    
+    -- Timestamps
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    
+    -- Claves foráneas
+    FOREIGN KEY (id_zona) REFERENCES zonas(id_zona) ON DELETE RESTRICT,
+    FOREIGN KEY (id_desarrollo) REFERENCES desarrollos(id_desarrollo) ON DELETE SET NULL,
+    FOREIGN KEY (id_broker_encargado) REFERENCES personas(id_persona) ON DELETE RESTRICT,
+    
+    -- Índices para búsquedas
+    INDEX idx_tipo_operacion (tipo_operacion),
+    INDEX idx_tipo_inmueble (tipo_inmueble),
+    INDEX idx_vocacion (vocacion),
+    INDEX idx_zona (id_zona),
+    INDEX idx_broker (id_broker_encargado),
+    INDEX idx_precio_venta (precio_venta_mn),
+    INDEX idx_precio_renta (precio_renta_mn),
+    INDEX idx_recamaras (recamaras),
+    INDEX idx_status (status),
+    INDEX idx_fecha_alta (fecha_alta)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- =========================================
+-- TABLA 7: HISTORIAL_PRECIOS (tracking automático)
+-- =========================================
+CREATE TABLE historial_precios (
+    id_historial INT PRIMARY KEY AUTO_INCREMENT,
+    
+    id_propiedad INT NOT NULL,
+    fecha_cambio TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    
+    -- Precios VENTA
+    precio_venta_anterior_mn DECIMAL(15,2),
+    precio_venta_nuevo_mn DECIMAL(15,2),
+    moneda_venta ENUM('MXN', 'USD'),
+    
+    -- Precios RENTA
+    precio_renta_anterior_mn DECIMAL(15,2),
+    precio_renta_nuevo_mn DECIMAL(15,2),
+    moneda_renta ENUM('MXN', 'USD'),
+    
+    -- Tipo de cambio en el momento
+    tipo_cambio_momento DECIMAL(8,4),
+    
+    -- Quien modificó
+    id_usuario_modifico INT,
+    motivo_cambio VARCHAR(500),
+    
+    FOREIGN KEY (id_propiedad) REFERENCES inmuebles(id_propiedad) ON DELETE CASCADE,
+    FOREIGN KEY (id_usuario_modifico) REFERENCES personas(id_persona) ON DELETE SET NULL,
+    
+    INDEX idx_propiedad (id_propiedad),
+    INDEX idx_fecha_cambio (fecha_cambio)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- =========================================
+-- TABLA 8: SESIONES_ANONIMAS (tracking pre-registro)
+-- =========================================
+CREATE TABLE sesiones_anonimas (
+    id_sesion INT PRIMARY KEY AUTO_INCREMENT,
+    
+    fingerprint_navegador VARCHAR(255) UNIQUE,
+    ip_address VARCHAR(45),
+    user_agent TEXT,
+    
+    fecha_primera_visita TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    fecha_ultima_visita TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    
+    -- Se llena cuando se identifica
+    id_persona INT,
+    
+    FOREIGN KEY (id_persona) REFERENCES personas(id_persona) ON DELETE SET NULL,
+    
+    INDEX idx_fingerprint (fingerprint_navegador),
+    INDEX idx_persona (id_persona)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- =========================================
+-- TABLA 9: VISITAS_BUSQUEDAS (tracking completo)
+-- =========================================
+CREATE TABLE visitas_busquedas (
+    id_visita INT PRIMARY KEY AUTO_INCREMENT,
+    
+    -- Identificación
+    id_persona INT,
+    id_sesion INT,
+    timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    
+    -- Navegación
+    landing_page VARCHAR(500),
+    segundo_page VARCHAR(500),
+    tercer_page VARCHAR(500),
+    cuarto_page VARCHAR(500),
+    quinto_page VARCHAR(500),
+    
+    -- Parámetros de búsqueda
+    palabras_usadas JSON,
+    id_zona_buscada INT,
+    tipo_inmueble_buscado VARCHAR(100),
+    tipo_operacion ENUM('venta', 'renta', 'ambos'),
+    
+    -- Dimensiones buscadas
+    max_superf_construida DECIMAL(12,2),
+    min_superf_construida DECIMAL(12,2),
+    max_superf_terreno DECIMAL(12,2),
+    min_superf_terreno DECIMAL(12,2),
+    recamaras INT,
+    banos DECIMAL(3,1),
+    estacionamientos INT,
+    
+    -- Rangos de precio
+    max_precio_venta_mn DECIMAL(15,2),
+    min_precio_venta_mn DECIMAL(15,2),
+    max_precio_renta_mn DECIMAL(15,2),
+    min_precio_renta_mn DECIMAL(15,2),
+    
+    -- Propiedades consultadas
+    id_propiedad_mas_tiempo INT,
+    id_propiedades_abiertas JSON,
+    id_propiedades_aparecidas_10 JSON,
+    
+    FOREIGN KEY (id_persona) REFERENCES personas(id_persona) ON DELETE SET NULL,
+    FOREIGN KEY (id_sesion) REFERENCES sesiones_anonimas(id_sesion) ON DELETE CASCADE,
+    FOREIGN KEY (id_zona_buscada) REFERENCES zonas(id_zona) ON DELETE SET NULL,
+    FOREIGN KEY (id_propiedad_mas_tiempo) REFERENCES inmuebles(id_propiedad) ON DELETE SET NULL,
+    
+    INDEX idx_persona (id_persona),
+    INDEX idx_sesion (id_sesion),
+    INDEX idx_timestamp (timestamp),
+    INDEX idx_tipo_operacion (tipo_operacion)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- =========================================
+-- TABLA 10: INTERACCIONES_PROPIEDADES (CRM Broker)
+-- =========================================
+CREATE TABLE interacciones_propiedades (
+    id_interaccion INT PRIMARY KEY AUTO_INCREMENT,
+    
+    id_propiedad INT NOT NULL,
+    id_broker_dueno INT NOT NULL,
+    id_persona_visitante INT,
+    id_sesion INT,
+    
+    tipo_interaccion ENUM('vista', 'click', 'mensaje', 'llamada', 'whatsapp', 
+                          'compartir', 'guardar_favorito') NOT NULL,
+    fecha_interaccion TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    
+    tiempo_visualizacion INT, -- segundos
+    datos_adicionales JSON,
+    
+    FOREIGN KEY (id_propiedad) REFERENCES inmuebles(id_propiedad) ON DELETE CASCADE,
+    FOREIGN KEY (id_broker_dueno) REFERENCES personas(id_persona) ON DELETE CASCADE,
+    FOREIGN KEY (id_persona_visitante) REFERENCES personas(id_persona) ON DELETE SET NULL,
+    FOREIGN KEY (id_sesion) REFERENCES sesiones_anonimas(id_sesion) ON DELETE SET NULL,
+    
+    INDEX idx_propiedad (id_propiedad),
+    INDEX idx_broker (id_broker_dueno),
+    INDEX idx_visitante (id_persona_visitante),
+    INDEX idx_tipo_interaccion (tipo_interaccion),
+    INDEX idx_fecha (fecha_interaccion)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- =========================================
+-- TRIGGER: Registrar cambios de precio automáticamente
+-- =========================================
+DELIMITER //
+
+CREATE TRIGGER trg_inmuebles_historial_precios
+AFTER UPDATE ON inmuebles
+FOR EACH ROW
+BEGIN
+    -- Solo si cambió el precio de venta o renta
+    IF (OLD.precio_venta_mn != NEW.precio_venta_mn) 
+       OR (OLD.precio_renta_mn != NEW.precio_renta_mn) THEN
+        
+        INSERT INTO historial_precios (
+            id_propiedad,
+            precio_venta_anterior_mn,
+            precio_venta_nuevo_mn,
+            moneda_venta,
+            precio_renta_anterior_mn,
+            precio_renta_nuevo_mn,
+            moneda_renta,
+            tipo_cambio_momento,
+            id_usuario_modifico
+        ) VALUES (
+            NEW.id_propiedad,
+            OLD.precio_venta_mn,
+            NEW.precio_venta_mn,
+            NEW.moneda_venta,
+            OLD.precio_renta_mn,
+            NEW.precio_renta_mn,
+            NEW.moneda_renta,
+            NEW.tipo_de_cambio,
+            NEW.id_broker_encargado
+        );
+    END IF;
+END//
+
+DELIMITER ;
+
+-- =========================================
+-- VISTAS ÚTILES
+-- =========================================
+
+-- Vista: Propiedades activas con información completa
+CREATE VIEW v_propiedades_activas AS
+SELECT 
+    i.*,
+    z.zona as nombre_zona,
+    z.ciudad,
+    z.municipio,
+    z.estado,
+    CONCAT(p.nombre, ' ', p.apellido_paterno) as nombre_broker,
+    p.email as email_broker,
+    p.mobil as mobil_broker,
+    e.marca_inmobiliaria,
+    d.nombre_desarrollo
+FROM inmuebles i
+LEFT JOIN zonas z ON i.id_zona = z.id_zona
+LEFT JOIN personas p ON i.id_broker_encargado = p.id_persona
+LEFT JOIN empresas e ON p.id_empresa_vinc = e.id_empresa
+LEFT JOIN desarrollos d ON i.id_desarrollo = d.id_desarrollo
+WHERE i.status NOT IN ('operacion cerrada', 'promocion suspendida');
+
+-- Vista: Analytics de búsquedas
+CREATE VIEW v_analytics_busquedas AS
+SELECT 
+    DATE(timestamp) as fecha,
+    tipo_operacion,
+    COUNT(*) as num_busquedas,
+    AVG((max_precio_venta_mn + min_precio_venta_mn) / 2) as precio_promedio_venta,
+    AVG((max_precio_renta_mn + min_precio_renta_mn) / 2) as precio_promedio_renta
+FROM visitas_busquedas
+WHERE timestamp >= DATE_SUB(CURRENT_DATE, INTERVAL 90 DAY)
+GROUP BY DATE(timestamp), tipo_operacion;
+
+-- Vista: Propiedades más vistas por broker
+CREATE VIEW v_broker_propiedades_top AS
+SELECT 
+    i.id_broker_encargado,
+    CONCAT(p.nombre, ' ', p.apellido_paterno) as nombre_broker,
+    i.id_propiedad,
+    i.titulo,
+    i.vistas,
+    i.clicks,
+    i.muestras_de_interes
+FROM inmuebles i
+JOIN personas p ON i.id_broker_encargado = p.id_persona
+WHERE i.status = 'nueva'
+ORDER BY i.vistas DESC;
+
+-- =========================================
+-- ÍNDICES DE TEXTO COMPLETO (para búsquedas)
+-- =========================================
+CREATE FULLTEXT INDEX idx_inmuebles_fulltext 
+ON inmuebles(titulo, descripcion, a_destacar);
+
+-- =========================================
+-- COMENTARIOS EN TABLAS
+-- =========================================
+ALTER TABLE zonas COMMENT = 'Base geográfica: estados, municipios, colonias, CPs';
+ALTER TABLE empresas COMMENT = 'Inmobiliarias y empresas relacionadas al sector';
+ALTER TABLE personas COMMENT = 'Brokers, visitantes, prospectos - tabla unificada';
+ALTER TABLE inmuebles COMMENT = 'Propiedades en promoción';
+ALTER TABLE historial_precios COMMENT = 'Tracking automático de cambios de precio';
+ALTER TABLE visitas_busquedas COMMENT = 'Analytics de búsquedas y navegación';
+ALTER TABLE interacciones_propiedades COMMENT = 'CRM para brokers: quién vio qué';
+
+-- =========================================
+-- FIN DEL SCHEMA
+-- =========================================
