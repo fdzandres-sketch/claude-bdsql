@@ -1,5 +1,5 @@
 # 🏠 Portal Inmobiliario - Sistema Completo
-**Estado: Backend Funcional ✅ | Base de Datos Completa ✅**
+**Estado: Backend Funcional ✅ | Base de Datos Completa ✅ | Frontend React ✅**
 
 ## 📝 Descripción
 Sistema de gestión inmobiliaria profesional con base de datos MySQL de 14 tablas, API REST completa en Node.js + Express, y sistema de catálogos dinámicos.
@@ -12,9 +12,16 @@ Sistema de gestión inmobiliaria profesional con base de datos MySQL de 14 tabla
 - ✅ CRM para brokers
 - ✅ Sistema de clones de propiedades
 - ✅ Tracking de visitantes y búsquedas
+- ✅ Frontend React con Vite + TypeScript
+- ✅ Diseño responsive con Tailwind CSS
+- ✅ 4 páginas principales (Home, Propiedades, Detalle, Contacto)
 
 ## 🛠️ Stack Tecnológico (Implementado)
 - **Backend:** Node.js 18+ + Express 4.x
+- **Frontend:** React 18 + Vite + TypeScript
+- **Estilos:** Tailwind CSS
+- **Routing:** React Router DOM
+- **HTTP Client:** Axios
 - **Base de Datos:** MySQL 8.0 / MariaDB 10.4+
 - **Autenticación:** JWT (jsonwebtoken)
 - **Seguridad:** bcrypt, helmet, cors
@@ -94,12 +101,25 @@ cp .env.example .env
 # Editar .env con tus credenciales de MySQL
 ```
 
-### Paso 6: Iniciar servidor
+### Paso 6: Iniciar servidor backend
 ```bash
 npm run dev
 ```
 
 El servidor estará disponible en: http://localhost:5000
+
+### Paso 7: Instalar dependencias del frontend
+```bash
+cd ../frontend
+npm install
+```
+
+### Paso 8: Iniciar servidor frontend
+```bash
+npm run dev
+```
+
+El frontend estará disponible en: http://localhost:3000
 
 ## 🧪 Probar la API
 ```bash
@@ -122,13 +142,24 @@ claude-bdsql/
 │   ├── catalogos.sql     # 140+ opciones
 │   └── tablas_crm.sql    # Tablas CRM
 │
-└── backend/              # API REST
+├── backend/              # API REST
+│   ├── src/
+│   │   ├── controllers/  # 8 controladores
+│   │   ├── models/       # 8 modelos
+│   │   ├── routes/       # 6 archivos de rutas
+│   │   ├── middlewares/  # Auth, validación, errores
+│   │   └── config/       # Configuración DB
+│   ├── .env.example
+│   └── package.json
+│
+└── frontend/             # React App
     ├── src/
-    │   ├── controllers/  # 8 controladores
-    │   ├── models/       # 8 modelos
-    │   ├── routes/       # 6 archivos de rutas
-    │   ├── middlewares/  # Auth, validación, errores
-    │   └── config/       # Configuración DB
+    │   ├── components/   # Header, Footer, PropertyCard, SearchBar
+    │   ├── pages/        # Home, Properties, PropertyDetail, Contact
+    │   ├── services/     # apiService.ts (cliente HTTP)
+    │   ├── types/        # Tipos TypeScript
+    │   ├── App.tsx       # Componente principal + Router
+    │   └── index.css     # Tailwind CSS
     ├── .env.example
     └── package.json
 ```
@@ -141,8 +172,11 @@ claude-bdsql/
 - [x] Sistema de catálogos dinámicos
 - [x] Autenticación JWT
 - [x] Tablas CRM (mensajes, visitas, prospectos)
-- [ ] Frontend React (próximo)
-- [ ] Dashboard de administración
+- [x] Frontend React (Vite + TypeScript + Tailwind)
+- [x] Páginas principales (Home, Propiedades, Detalle, Contacto)
+- [x] Componentes reutilizables (Header, Footer, PropertyCard, SearchBar)
+- [x] Integración con API backend
+- [ ] Dashboard de administración para brokers
 - [ ] Sistema de carga de imágenes
 - [ ] Integración con WhatsApp
 - [ ] Deploy a producción
@@ -155,4 +189,4 @@ claude-bdsql/
 Este proyecto es privado y su uso está restringido.
 
 ---
-**Estado del Proyecto:** 🟢 Backend Funcional | 🟡 Frontend en Desarrollo
+**Estado del Proyecto:** 🟢 Backend Funcional | 🟢 Frontend React Completo | 🟡 Dashboard en Desarrollo

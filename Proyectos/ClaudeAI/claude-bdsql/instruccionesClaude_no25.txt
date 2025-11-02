@@ -1,0 +1,26 @@
+Necesito arreglar el problema de los precios que muestran "$NaN" en las tarjetas de propiedades.
+
+El problema está en frontend/src/components/PropertyCard.tsx
+
+Revisa cómo se está formateando el precio. Probablemente:
+
+1. El backend está devolviendo el precio como string en lugar de number
+2. O el componente no está parseando correctamente el valor
+3. O el campo se llama diferente (precio_venta vs price)
+
+Solución:
+1. En PropertyCard.tsx, busca donde se muestra el precio
+2. Agrega una función para formatear precios correctamente:
+
+const formatPrice = (price: number | string) => {
+  const numPrice = typeof price === 'string' ? parseFloat(price) : price;
+  if (isNaN(numPrice)) return 'Precio a consultar';
+  return new Intl.NumberFormat('es-MX', {
+    style: 'currency',
+    currency: 'MXN',
+    minimumFractionDigits: 0
+  }).format(numPrice);
+};
+
+3. Usa esta función para mostrar el precio en el componente
+4. Verifica que el nombre del campo coincida con lo que devuelve el backend (revisa backend/src/models/propertyModel.js para ver cómo se llaman los campos)

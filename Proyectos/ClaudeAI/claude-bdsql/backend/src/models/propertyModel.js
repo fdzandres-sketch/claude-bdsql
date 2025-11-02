@@ -10,11 +10,29 @@ class PropertyModel {
     // Base query
     let sql = `
       SELECT
-        i.*,
+        i.id_propiedad as id,
+        i.titulo,
+        i.descripcion,
+        CASE
+          WHEN i.tipo_operacion = 'Renta' THEN i.precio_renta_mn
+          ELSE i.precio_venta_mn
+        END as precio,
+        i.tipo_inmueble as tipo_propiedad,
+        i.tipo_operacion as tipo_transaccion,
+        i.recamaras as habitaciones,
+        i.banos,
+        i.estacionamientos,
+        i.medida_construccion as metros_cuadrados,
+        i.calle as direccion,
+        i.id_zona as zona_id,
+        i.id_broker_encargado as broker_id,
+        i.fotos,
+        i.fecha_alta as fecha_publicacion,
         CONCAT(p.nombre, ' ', p.apellido_paterno, ' ', COALESCE(p.apellido_materno, '')) as broker_nombre,
         p.email as broker_email,
         p.mobil as broker_telefono,
         z.zona as zona_nombre,
+        z.estado,
         d.nombre_desarrollo as desarrollo_nombre
       FROM inmuebles i
       LEFT JOIN personas p ON i.id_broker_encargado = p.id_persona AND p.clasif_persona = 'Broker'
@@ -123,7 +141,32 @@ class PropertyModel {
   static async getById(id) {
     const sql = `
       SELECT
-        i.*,
+        i.id_propiedad as id,
+        i.titulo,
+        i.descripcion,
+        CASE
+          WHEN i.tipo_operacion = 'Renta' THEN i.precio_renta_mn
+          ELSE i.precio_venta_mn
+        END as precio,
+        i.tipo_inmueble as tipo_propiedad,
+        i.tipo_operacion as tipo_transaccion,
+        i.recamaras as habitaciones,
+        i.banos,
+        i.estacionamientos,
+        i.medida_construccion as metros_cuadrados,
+        i.m2_terreno as superficie_terreno,
+        i.calle as direccion,
+        i.no_exterior,
+        i.no_interior,
+        i.id_zona as zona_id,
+        i.id_desarrollo as desarrollo_id,
+        i.id_broker_encargado as broker_id,
+        i.fotos,
+        i.fecha_alta as fecha_publicacion,
+        i.otros_espacios_resid,
+        i.servicios_resid,
+        i.areas_comunes,
+        i.ano_construccion as antiguedad,
         p.id_persona as broker_id,
         CONCAT(p.nombre, ' ', p.apellido_paterno, ' ', COALESCE(p.apellido_materno, '')) as broker_nombre,
         p.email as broker_email,
@@ -174,7 +217,23 @@ class PropertyModel {
 
     let sql = `
       SELECT
-        i.*,
+        i.id_propiedad as id,
+        i.titulo,
+        i.descripcion,
+        CASE
+          WHEN i.tipo_operacion = 'Renta' THEN i.precio_renta_mn
+          ELSE i.precio_venta_mn
+        END as precio,
+        i.tipo_inmueble as tipo_propiedad,
+        i.tipo_operacion as tipo_transaccion,
+        i.recamaras as habitaciones,
+        i.banos,
+        i.estacionamientos,
+        i.medida_construccion as metros_cuadrados,
+        i.id_zona as zona_id,
+        i.id_broker_encargado as broker_id,
+        i.status_promocion as estatus,
+        i.fecha_alta as fecha_publicacion,
         z.zona as zona_nombre,
         d.nombre_desarrollo as desarrollo_nombre,
         (SELECT COUNT(*) FROM interacciones_propiedades WHERE id_propiedad = i.id_propiedad) as total_interacciones
