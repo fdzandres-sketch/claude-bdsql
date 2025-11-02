@@ -1,222 +1,158 @@
-# Sistema de Gestión Inmobiliaria
+# 🏠 Portal Inmobiliario - Sistema Completo
+**Estado: Backend Funcional ✅ | Base de Datos Completa ✅**
 
-## Descripción del Proyecto
+## 📝 Descripción
+Sistema de gestión inmobiliaria profesional con base de datos MySQL de 14 tablas, API REST completa en Node.js + Express, y sistema de catálogos dinámicos.
 
-Sistema integral de gestión inmobiliaria que permite administrar propiedades, clientes, transacciones y documentación relacionada con el negocio inmobiliario. La plataforma facilita la gestión de alquileres, ventas, mantenimiento de propiedades y seguimiento de clientes.
+**✨ ACTUALMENTE FUNCIONANDO:**
+- ✅ Base de datos MySQL con 14 tablas relacionales
+- ✅ API REST con 5 endpoints públicos
+- ✅ Sistema de autenticación JWT
+- ✅ Catálogos dinámicos (140+ opciones)
+- ✅ CRM para brokers
+- ✅ Sistema de clones de propiedades
+- ✅ Tracking de visitantes y búsquedas
 
-## Características Principales
+## 🛠️ Stack Tecnológico (Implementado)
+- **Backend:** Node.js 18+ + Express 4.x
+- **Base de Datos:** MySQL 8.0 / MariaDB 10.4+
+- **Autenticación:** JWT (jsonwebtoken)
+- **Seguridad:** bcrypt, helmet, cors
+- **Validación:** express-validator
 
-- **Gestión de Propiedades**: Registro y administración completa de inmuebles (casas, apartamentos, locales comerciales, terrenos)
-- **Gestión de Clientes**: Base de datos de propietarios, compradores, inquilinos y prospectos
-- **Transacciones**: Control de ventas, alquileres, pagos y comisiones
-- **Documentación**: Almacenamiento y gestión de contratos, escrituras y documentos legales
-- **Reportes y Analytics**: Dashboard con métricas clave del negocio
-- **Búsqueda Avanzada**: Filtros por ubicación, precio, características y disponibilidad
-- **Calendario**: Gestión de citas, visitas y recordatorios
+## 📊 Base de Datos (14 Tablas)
+1. zonas - Ubicaciones geográficas (15 registros)
+2. empresas - Inmobiliarias (6 registros)
+3. personas - Brokers y clientes (9 brokers)
+4. relaciones_personas - Vínculos entre personas
+5. desarrollos - Fraccionamientos y condominios
+6. propiedades_fisicas - Inmuebles únicos
+7. inmuebles - Promociones de propiedades (10 activas)
+8. historial_precios - Cambios de precios
+9. sesiones_anonimas - Visitantes sin registro
+10. visitas_busquedas - Tracking de búsquedas
+11. interacciones_propiedades - CRM
+12. catalogos_opciones - Opciones dinámicas (140+ opciones)
+13. mensajes - Comunicación broker-cliente
+14. solicitudes_visita - Agendamiento de citas
+15. prospectos - Pipeline de ventas
 
-## Estructura del Proyecto
+## 📡 API Endpoints (Funcionando)
 
-```
-claude-bdsql/
-├── database/           # Esquemas y scripts de base de datos
-│   ├── schemas/       # Definiciones de tablas y relaciones
-│   ├── migrations/    # Scripts de migración
-│   ├── seeds/         # Datos iniciales
-│   └── scripts/       # Scripts de utilidad
-│
-├── backend/           # API y lógica de negocio
-│   ├── src/
-│   │   ├── controllers/  # Controladores de rutas
-│   │   ├── models/       # Modelos de datos
-│   │   ├── routes/       # Definición de endpoints
-│   │   ├── services/     # Lógica de negocio
-│   │   ├── middleware/   # Middleware personalizado
-│   │   ├── utils/        # Funciones auxiliares
-│   │   └── config/       # Configuración
-│   └── tests/         # Tests unitarios y de integración
-│
-└── frontend/          # Interfaz de usuario
-    ├── src/
-    │   ├── components/   # Componentes reutilizables
-    │   ├── pages/        # Páginas de la aplicación
-    │   ├── services/     # Servicios API
-    │   ├── hooks/        # Custom hooks
-    │   ├── context/      # Context API
-    │   ├── utils/        # Utilidades frontend
-    │   └── assets/       # Imágenes, iconos, estilos
-    └── public/        # Archivos estáticos
-```
+### Públicos (sin autenticación)
+- `GET /api/properties` - Listar propiedades con filtros
+- `GET /api/properties/:id` - Detalle de propiedad
+- `GET /api/zones` - Listar zonas con estadísticas
+- `GET /api/developments` - Listar desarrollos
+- `GET /api/brokers` - Directorio de brokers
+- `GET /api/brokers/:id` - Perfil de broker
+- `GET /api/catalogos` - Todos los catálogos
+- `GET /api/catalogos/:campo` - Opciones de un campo
 
-## Tecnologías Previstas
+### Autenticados (requieren JWT)
+- `POST /api/auth/registro-broker` - Registro de broker
+- `POST /api/auth/login` - Login
+- `POST /api/properties` - Crear propiedad
+- `PUT /api/properties/:id` - Actualizar propiedad
+- `PATCH /api/properties/:id/pausar` - Pausar promoción
 
-### Base de Datos
-- SQL Server / PostgreSQL / MySQL
-- Sistema de respaldo automático
-- Optimización de consultas
+## 🚀 Instalación
 
-### Backend
-- Node.js + Express / Python + FastAPI / .NET Core
-- JWT para autenticación
-- API RESTful
-- Validación de datos
-- Logging y monitoreo
-
-### Frontend
-- React / Vue.js / Angular
-- TypeScript
-- State Management (Redux/Zustand/Pinia)
-- UI Component Library
-- Responsive Design
-
-## Módulos del Sistema
-
-### 1. Módulo de Propiedades
-- Registro de inmuebles con fotografías
-- Características detalladas (m², habitaciones, baños, etc.)
-- Ubicación geográfica
-- Estado y disponibilidad
-- Historial de la propiedad
-
-### 2. Módulo de Clientes
-- Información de contacto
-- Historial de interacciones
-- Preferencias de búsqueda
-- Documentos asociados
-- Segmentación de clientes
-
-### 3. Módulo de Transacciones
-- Registro de ventas y alquileres
-- Control de pagos y cuotas
-- Cálculo de comisiones
-- Estados de transacciones
-- Generación de recibos
-
-### 4. Módulo de Documentos
-- Almacenamiento seguro
-- Versionado de documentos
-- Firma digital
-- Templates de contratos
-- Cumplimiento legal
-
-### 5. Módulo de Reportes
-- Dashboard ejecutivo
-- Reportes de ventas
-- Análisis de mercado
-- Proyecciones financieras
-- Exportación a PDF/Excel
-
-## Instalación
-
-### Prerrequisitos
-- Node.js v18+ / Python 3.10+ / .NET 8+
-- Base de datos instalada
+### Requisitos Previos
+- Node.js 18+
+- MySQL 8.0+ o MariaDB 10.4+
 - Git
 
-### Pasos de Instalación
-
-1. **Clonar el repositorio**
+### Paso 1: Clonar repositorio
 ```bash
-git clone [URL_DEL_REPOSITORIO]
+git clone https://github.com/fdzandres-sketch/claude-bdsql.git
 cd claude-bdsql
 ```
 
-2. **Configurar Base de Datos**
+### Paso 2: Instalar MySQL/MariaDB
+(Instrucciones según tu sistema operativo)
+
+### Paso 3: Crear base de datos
 ```bash
 cd database
-# Ejecutar scripts de creación de esquema
-# Ejecutar migraciones
-# (Instrucciones específicas según el motor de BD)
+mysql -u root -p < setup.sql
+mysql -u root -p bienesraicesdb < schema.sql
+mysql -u root -p bienesraicesdb < seed.sql
+mysql -u root -p bienesraicesdb < catalogos.sql
+mysql -u root -p bienesraicesdb < tablas_crm.sql
 ```
 
-3. **Configurar Backend**
+### Paso 4: Instalar dependencias del backend
 ```bash
 cd backend
-npm install  # o pip install -r requirements.txt
-# Configurar variables de entorno
-cp .env.example .env
-# Iniciar servidor
-npm run dev  # o python main.py
+npm install
 ```
 
-4. **Configurar Frontend**
+### Paso 5: Configurar variables de entorno
 ```bash
-cd frontend
-npm install
-# Configurar variables de entorno
 cp .env.example .env
-# Iniciar aplicación
+# Editar .env con tus credenciales de MySQL
+```
+
+### Paso 6: Iniciar servidor
+```bash
 npm run dev
 ```
 
-## Configuración
+El servidor estará disponible en: http://localhost:5000
 
-Crear archivo `.env` en cada módulo con las siguientes variables:
-
-### Backend
-```env
-DATABASE_URL=
-JWT_SECRET=
-PORT=
-NODE_ENV=development
-```
-
-### Frontend
-```env
-VITE_API_URL=
-VITE_APP_NAME=
-```
-
-## Desarrollo
-
-### Comandos Útiles
-
-**Backend:**
+## 🧪 Probar la API
 ```bash
-npm run dev      # Desarrollo
-npm run build    # Compilar
-npm run test     # Tests
-npm run lint     # Linter
+# Listar propiedades
+curl http://localhost:5000/api/properties
+
+# Listar zonas
+curl http://localhost:5000/api/zones
+
+# Ver catálogos
+curl http://localhost:5000/api/catalogos
 ```
 
-**Frontend:**
-```bash
-npm run dev      # Desarrollo
-npm run build    # Producción
-npm run test     # Tests
-npm run preview  # Preview producción
+## 📁 Estructura del Proyecto
+```
+claude-bdsql/
+├── database/              # Base de datos
+│   ├── schema.sql        # 14 tablas (644 líneas)
+│   ├── seed.sql          # Datos de ejemplo
+│   ├── catalogos.sql     # 140+ opciones
+│   └── tablas_crm.sql    # Tablas CRM
+│
+└── backend/              # API REST
+    ├── src/
+    │   ├── controllers/  # 8 controladores
+    │   ├── models/       # 8 modelos
+    │   ├── routes/       # 6 archivos de rutas
+    │   ├── middlewares/  # Auth, validación, errores
+    │   └── config/       # Configuración DB
+    ├── .env.example
+    └── package.json
 ```
 
-## Roadmap
+## 🎯 Roadmap
+- [x] Diseño de base de datos (14 tablas)
+- [x] Implementación de schema SQL
+- [x] API Backend básica (Node.js + Express)
+- [x] Endpoints públicos (propiedades, zonas, brokers)
+- [x] Sistema de catálogos dinámicos
+- [x] Autenticación JWT
+- [x] Tablas CRM (mensajes, visitas, prospectos)
+- [ ] Frontend React (próximo)
+- [ ] Dashboard de administración
+- [ ] Sistema de carga de imágenes
+- [ ] Integración con WhatsApp
+- [ ] Deploy a producción
 
-- [ ] Fase 1: Diseño de base de datos
-- [ ] Fase 2: API Backend básica
-- [ ] Fase 3: Frontend interfaz principal
-- [ ] Fase 4: Autenticación y autorización
-- [ ] Fase 5: Módulo de propiedades
-- [ ] Fase 6: Módulo de clientes
-- [ ] Fase 7: Módulo de transacciones
-- [ ] Fase 8: Sistema de documentos
-- [ ] Fase 9: Dashboard y reportes
-- [ ] Fase 10: Testing y optimización
-- [ ] Fase 11: Deploy y documentación
+## 👤 Autor
+**Andrés** - Desarrollador
+- GitHub: [@fdzandres-sketch](https://github.com/fdzandres-sketch)
 
-## Contribución
-
-Las contribuciones son bienvenidas. Por favor:
-1. Fork el proyecto
-2. Crea una rama para tu feature (`git checkout -b feature/AmazingFeature`)
-3. Commit tus cambios (`git commit -m 'Add some AmazingFeature'`)
-4. Push a la rama (`git push origin feature/AmazingFeature`)
-5. Abre un Pull Request
-
-## Licencia
-
-[Especificar licencia]
-
-## Contacto
-
-[Información de contacto]
+## 📄 Licencia
+Este proyecto es privado y su uso está restringido.
 
 ---
-
-**Nota**: Este proyecto está en desarrollo activo. La documentación se actualizará conforme avance la implementación.
+**Estado del Proyecto:** 🟢 Backend Funcional | 🟡 Frontend en Desarrollo
